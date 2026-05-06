@@ -4,7 +4,8 @@ import pandas as pd
 import os
 
 # === SETTINGS ===
-VIDEO_PATH = "videos/squatting/squatting_side_normal_4.mp4"
+#VIDEO_PATH = "videos/squatting/squatting_side_normal_4.mp4"
+VIDEO_PATH = "videos/squatting_front_normal.mp4"
 SAVE_DIR = "data/raw_landmarks"
 os.makedirs(SAVE_DIR, exist_ok=True)
 

@@ -4,8 +4,9 @@ import pandas as pd
 import os
 
 # === SETTINGS ===
-VIDEO_PATH = "New_videos/04.05.2026/60Hz.mp4"
-SAVE_DIR = "New_videos/04.05.2026/raw_landmarks"
+#VIDEO_PATH = "New_videos/04.05.2026/60Hz.mp4"
+VIDEO_PATH = "videos/lifting_front_normal.mp4"
+SAVE_DIR = "Video_w_skeleton/04.05.2026/raw_landmarks"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # === INIT MEDIAPIPE ===
