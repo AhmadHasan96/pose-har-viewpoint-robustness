@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.animation import FuncAnimation
+from matplotlib.gridspec import GridSpec
+
 from mpl_toolkits.mplot3d import Axes3D
 
 # =========================
@@ -30,7 +32,7 @@ GENERATE_CSV = False #True
 GENERATE_VIDEO = False #True
 PLOT_3D = True
 
-PLOT_FRAME = 100
+PLOT_FRAME = 0
 
 # =========================
 # FILE PATHS
@@ -290,7 +292,7 @@ def plot_3d_skeleton(df, frame_idx):
         xs.append(row[f"x_{i}"])
 
         # Flip Y for natural orientation
-        ys.append(-row[f"z_{i}"])
+        ys.append(row[f"z_{i}"])
 
         zs.append(-row[f"y_{i}"])
 
@@ -349,7 +351,7 @@ if PLOT_3D:
             df,
             PLOT_FRAME
         )
-def animate_3d_skeleton(
+def animate_3d_skeleton_old(
     df,
     fps=30,
     save_animation=True
@@ -491,9 +493,245 @@ def animate_3d_skeleton(
 
     plt.show()
 
+
+def animate_3d_skeleton(
+    df,
+    fps=30,
+    save_animation=True
+):
+
+    fig = plt.figure(figsize=(14, 10))
+
+    # =========================
+    # SUBPLOTS
+    # =========================
+
+    # ax3d = fig.add_subplot(
+    #     221,
+    #     projection='3d'
+    # )
+    #
+    # ax_front = fig.add_subplot(222)
+    #
+    # ax_side = fig.add_subplot(212)
+    #
+
+    # =========================
+    # LAYOUT
+    # =========================
+
+    gs = GridSpec(
+        2,
+        2,
+        width_ratios=[1.5, 1],
+        height_ratios=[1, 1]
+    )
+
+    # Large 3D pane on left
+    ax3d = fig.add_subplot(
+        gs[:, 0],
+        projection='3d'
+    )
+
+    # Front view top-right
+    ax_front = fig.add_subplot(
+        gs[0, 1]
+    )
+
+    # Side view bottom-right
+    ax_side = fig.add_subplot(
+        gs[1, 1]
+    )
+
+    # =========================
+    # UPDATE FUNCTION
+    # =========================
+
+    def update(frame_idx):
+
+        ax3d.cla()
+        ax_front.cla()
+        ax_side.cla()
+
+        row = df.iloc[frame_idx]
+
+        xs = []
+        ys = []
+        zs = []
+
+        # =====================
+        # LOAD LANDMARKS
+        # =====================
+
+        for i in range(33):
+
+            mp_x = row[f"x_{i}"]
+            mp_y = row[f"y_{i}"]
+            mp_z = row[f"z_{i}"]
+
+            # =================
+            # REMAP AXES
+            # =================
+
+            x = mp_x
+
+            # depth
+            y = -mp_z
+
+            # height
+            z = -mp_y
+
+            xs.append(x)
+            ys.append(y)
+            zs.append(z)
+
+        # ==================================================
+        # 3D VIEW
+        # ==================================================
+
+        ax3d.scatter(xs, ys, zs, s=40)
+
+        for start, end in POSE_CONNECTIONS:
+
+            if (
+                pd.notna(xs[start])
+                and
+                pd.notna(xs[end])
+            ):
+
+                ax3d.plot(
+                    [xs[start], xs[end]],
+                    [ys[start], ys[end]],
+                    [zs[start], zs[end]]
+                )
+
+        ax3d.set_xlim(-1, 1)
+        ax3d.set_ylim(-1, 1)
+        ax3d.set_zlim(-1, 1)
+
+        ax3d.set_xlabel("Left/Right")
+        ax3d.set_ylabel("Depth")
+        ax3d.set_zlabel("Height")
+
+        ax3d.set_title("3D View")
+
+        ax3d.set_box_aspect([1, 1, 2])
+
+        ax3d.view_init(
+            elev=15,
+            azim=-70
+        )
+
+        # ==================================================
+        # FRONT VIEW
+        # X vs HEIGHT
+        # ==================================================
+
+        ax_front.scatter(xs, zs)
+
+        for start, end in POSE_CONNECTIONS:
+
+            if (
+                pd.notna(xs[start])
+                and
+                pd.notna(xs[end])
+            ):
+
+                ax_front.plot(
+                    [xs[start], xs[end]],
+                    [zs[start], zs[end]]
+                )
+
+        ax_front.set_xlim(-1, 1)
+        ax_front.set_ylim(-1, 1)
+
+        ax_front.set_xlabel("Left/Right")
+        ax_front.set_ylabel("Height")
+
+        ax_front.set_title("Front View")
+
+        ax_front.set_aspect('equal')
+        ax_front.grid(True)
+
+        # ==================================================
+        # SIDE VIEW
+        # DEPTH vs HEIGHT
+        # ==================================================
+
+        ax_side.scatter(ys, zs)
+
+        for start, end in POSE_CONNECTIONS:
+
+            if (
+                pd.notna(ys[start])
+                and
+                pd.notna(ys[end])
+            ):
+
+                ax_side.plot(
+                    [ys[start], ys[end]],
+                    [zs[start], zs[end]]
+                )
+
+        ax_side.set_xlim(-1, 1)
+        ax_side.set_ylim(-1, 1)
+
+        ax_side.set_xlabel("Depth")
+        ax_side.set_ylabel("Height")
+
+        ax_side.set_title("Side View")
+
+        ax_side.set_aspect('equal')
+        ax_side.grid(True)
+
+        # ==================================================
+        # GLOBAL TITLE
+        # ==================================================
+
+        fig.suptitle(
+            f"Pose Animation - Frame {frame_idx}",
+            fontsize=16
+        )
+
+    # =========================
+    # CREATE ANIMATION
+    # =========================
+
+    anim = FuncAnimation(
+        fig,
+        update,
+        frames=len(df),
+        interval=1000 / fps,
+        repeat=True
+    )
+
+    # =========================
+    # SAVE
+    # =========================
+
+    if save_animation:
+
+        output_path = os.path.join(
+            ANIMATION_DIR,
+            f"{video_name}_multiview.gif"
+        )
+
+        anim.save(
+            output_path,
+            writer="pillow",
+            fps=fps
+        )
+
+        print(
+            f"Saved animation -> {output_path}"
+        )
+
+    plt.show()
+
+
 animate_3d_skeleton(
     df,
-    fps=6, #fps,
+    fps=30, #fps,
     #fps=fps,
     save_animation=True
 )
