@@ -735,3 +735,4 @@ animate_3d_skeleton(
     #fps=fps,
     save_animation=True
 )
+# define the fps for the animation
